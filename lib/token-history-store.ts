@@ -2,7 +2,19 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { TokenHistoryPayload } from "./token-types";
 
-const FILE = path.join(process.cwd(), "data", "token-history.json");
+function getDefaultStorePath(): string {
+  if (process.env.TOKEN_HISTORY_STORE_PATH?.trim()) {
+    return process.env.TOKEN_HISTORY_STORE_PATH.trim();
+  }
+
+  if (process.env.VERCEL === "1") {
+    return path.join("/tmp", "token-history.json");
+  }
+
+  return path.join(process.cwd(), "data", "token-history.json");
+}
+
+const FILE = getDefaultStorePath();
 
 export async function readTokenHistory(): Promise<TokenHistoryPayload | null> {
   try {

@@ -18,6 +18,16 @@ When configured, `/api/wallet-burns` will:
 - update stored data only if total burned XEN increased,
 - return global stats and leaderboard data.
 
+## Token history storage
+
+Local development stores token price history in `data/token-history.json`.
+
+On Vercel, the app automatically uses `/tmp/token-history.json` as an ephemeral runtime cache because the deployment filesystem is not writable. You can override the location with:
+
+```env
+TOKEN_HISTORY_STORE_PATH=...
+```
+
 ## Getting Started
 
 First, run the development server:
