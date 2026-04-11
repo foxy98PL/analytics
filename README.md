@@ -1,5 +1,23 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Supabase integration (burn storage + global stats + leaderboard)
+
+1. Create a Supabase project.
+2. Open SQL Editor and run [supabase/schema.sql](supabase/schema.sql).
+3. Add environment variables to your local .env:
+
+```env
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+4. Keep your existing Alchemy env variables.
+
+When configured, `/api/wallet-burns` will:
+- persist wallet burn data,
+- update stored data only if total burned XEN increased,
+- return global stats and leaderboard data.
+
 ## Getting Started
 
 First, run the development server:
