@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { SideNav } from "@/components/SideNav";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const displaySans = Space_Grotesk({
+  variable: "--font-display-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 
@@ -26,9 +28,16 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${displaySans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0c0a09]">{children}</body>
+      <body className="min-h-full bg-[#0d0d0f] text-zinc-100">
+        <div className="enterprise-shell relative min-h-screen lg:flex">
+          <div className="relative z-10 lg:sticky lg:top-0 lg:h-screen lg:shrink-0">
+            <SideNav />
+          </div>
+          <div className="relative z-10 flex-1">{children}</div>
+        </div>
+      </body>
     </html>
   );
 }

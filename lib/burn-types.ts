@@ -11,6 +11,7 @@ export type AssetTransfer = {
 };
 
 export type BurnTransferPublic = {
+  chain: string;
   hash: string;
   blockNum: string;
   timestamp: string;
@@ -23,5 +24,5 @@ export type DayBurnSummary = {
   dayKey: string;
   totalXen: number;
   txCount: number;
-  txs: { hash: string; xenAmount: number; usdValue: number; timestamp: string }[];
+  txs: { chain: string; hash: string; xenAmount: number; usdValue: number; timestamp: string }[];
 };

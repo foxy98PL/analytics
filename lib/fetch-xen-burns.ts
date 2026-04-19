@@ -1,10 +1,9 @@
 import { getAlchemyRpcUrl } from "./alchemy-rpc";
 import type { AssetTransfer, BurnTransferPublic, DayBurnSummary } from "./burn-types";
-import { TOKEN_CONFIG } from "./sync-token-history";
-import { readTokenHistory } from "./token-history-store";
+import { getChainConfig, type ChainKey } from "./chains";
+import { refreshTokenHistoryToToday } from "./sync-token-history";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
-const XEN = TOKEN_CONFIG.address.toLowerCase();
 
 function utcDayKey(iso: string): string {
   const d = new Date(iso);
@@ -14,10 +13,9 @@ function utcDayKey(iso: string): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Map YYYY-MM-DD -> USD price (close) from stored daily candles. */
-async function buildPriceByDay(): Promise<Map<string, number>> {
+async function buildPriceByDayForChain(chain: ChainKey): Promise<Map<string, number>> {
   const map = new Map<string, number>();
-  const hist = await readTokenHistory();
+  const hist = await refreshTokenHistoryToToday(chain);
   if (!hist?.data?.length) return map;
   for (const row of hist.data) {
     const key = row.timestamp.slice(0, 10);
@@ -27,10 +25,11 @@ async function buildPriceByDay(): Promise<Map<string, number>> {
 }
 
 async function fetchAssetTransferPage(
+  chain: ChainKey,
   fromAddress: string,
   pageKey?: string
 ): Promise<{ transfers: AssetTransfer[]; pageKey?: string }> {
-  const url = getAlchemyRpcUrl();
+  const url = getAlchemyRpcUrl(chain);
   const baseParams: Record<string, unknown> = {
     fromBlock: "0x0",
     fromAddress,
@@ -77,11 +76,11 @@ async function fetchAssetTransferPage(
   };
 }
 
-function isXenBurnToNull(t: AssetTransfer): boolean {
+function isXenBurnToNull(t: AssetTransfer, xenAddressLower: string): boolean {
   if (t.to?.toLowerCase() !== ZERO) return false;
   if (t.category !== "erc20") return false;
   const addr = t.rawContract?.address?.toLowerCase();
-  if (!addr || addr !== XEN) return false;
+  if (!addr || addr !== xenAddressLower) return false;
   return typeof t.value === "number" && t.value > 0;
 }
 
@@ -97,23 +96,25 @@ function priceForDay(priceByDay: Map<string, number>, dayKey: string): number {
   return 0;
 }
 
-export async function fetchXenBurnsForWallet(fromAddress: string): Promise<{
+export async function fetchXenBurnsForWallet(chain: ChainKey, fromAddress: string): Promise<{
   transfers: BurnTransferPublic[];
   byDay: DayBurnSummary[];
   totals: { xen: number; usd: number };
 }> {
   const normalized = fromAddress.trim();
-  const priceByDay = await buildPriceByDay();
+  const cfg = getChainConfig(chain);
+  const xenAddressLower = cfg.tokenAddress.toLowerCase();
+  const priceByDay = await buildPriceByDayForChain(chain);
 
   const all: AssetTransfer[] = [];
   let pageKey: string | undefined;
   do {
-    const page = await fetchAssetTransferPage(normalized, pageKey);
+    const page = await fetchAssetTransferPage(chain, normalized, pageKey);
     all.push(...page.transfers);
     pageKey = page.pageKey;
   } while (pageKey);
 
-  const xenBurns = all.filter(isXenBurnToNull);
+  const xenBurns = all.filter((t) => isXenBurnToNull(t, xenAddressLower));
 
   const transfers: BurnTransferPublic[] = [];
   const dayMap = new Map<
@@ -136,6 +137,7 @@ export async function fetchXenBurnsForWallet(fromAddress: string): Promise<{
     totalUsd += usd;
 
     transfers.push({
+      chain,
       hash: t.hash,
       blockNum: t.blockNum,
       timestamp: ts,
@@ -152,6 +154,7 @@ export async function fetchXenBurnsForWallet(fromAddress: string): Promise<{
     entry.totalXen += xen;
     entry.txs.push({
       hash: t.hash,
+      chain,
       xenAmount: xen,
       usdValue: usd,
       timestamp: ts,

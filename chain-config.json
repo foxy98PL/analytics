@@ -1,0 +1,9 @@
+{
+  "enabled": {
+    "eth": true,
+    "optimism": true,
+    "polygon": true,
+    "base": true,
+    "pulse": false
+  }
+}

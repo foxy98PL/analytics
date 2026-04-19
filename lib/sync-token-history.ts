@@ -1,100 +1,197 @@
-import {
-  mergeTokenHistory,
-  readTokenHistory,
-  writeTokenHistory,
-} from "./token-history-store";
 import { fetchHistoricalChunked } from "./fetch-historical-chunked";
+import { CHAIN_KEYS, type ChainKey, getChainConfig } from "./chains";
+import { fetchMoralisHistorical } from "./moralis-historical";
+import { getSupabaseAdmin, hasSupabaseAdmin } from "./supabase-server";
+import { mergeTokenHistory, readTokenHistory, writeTokenHistory } from "./token-history-store";
 import type { TokenHistoryPayload } from "./token-types";
 
-export const TOKEN_CONFIG = {
-  network: "eth-mainnet" as const,
-  address: "0x06450dEe7FD2Fb8E39061434BAbCFC05599a6Fb8",
-  interval: "1d" as const,
-  initialStartTime: "2022-01-01T00:00:00Z",
-  initialEndTime: "2026-07-01T00:00:00Z",
-};
+const INITIAL_START_TIME = "2020-01-01T00:00:00Z";
 
-function nextUtcDayIso(iso: string): string {
+function utcDayIso(iso: string): string {
   const d = new Date(iso);
-  d.setUTCDate(d.getUTCDate() + 1);
   d.setUTCHours(0, 0, 0, 0);
   return d.toISOString();
 }
 
-function utcDayStart(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0)
-  );
+function asDay(iso: string): string {
+  return iso.slice(0, 10);
 }
 
-/** True if we already have a daily candle for today's UTC date. */
-function hasCandleThroughToday(stored: TokenHistoryPayload): boolean {
-  if (stored.data.length === 0) return false;
-  const last = stored.data[stored.data.length - 1]!;
-  const lastDay = utcDayStart(new Date(last.timestamp));
-  const todayStart = utcDayStart(new Date());
-  return lastDay.getTime() >= todayStart.getTime();
+function todayUtcStart(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
 }
 
-/**
- * First server start: pull full history [2022, 2026-07) window and persist.
- */
-export async function syncTokenHistoryOnStartup(): Promise<void> {
-  const existing = await readTokenHistory();
-  if (existing && existing.data.length > 0) {
-    return;
+function hasFutureCandles(payload: TokenHistoryPayload): boolean {
+  const todayStart = todayUtcStart().getTime();
+  return payload.data.some((row) => new Date(row.timestamp).getTime() > todayStart);
+}
+
+function pruneFutureCandles(payload: TokenHistoryPayload): TokenHistoryPayload {
+  const todayStart = todayUtcStart().getTime();
+  const data = payload.data.filter((row) => new Date(row.timestamp).getTime() <= todayStart);
+  return {
+    ...payload,
+    data,
+  };
+}
+
+async function loadSupabaseHistory(chain: ChainKey): Promise<TokenHistoryPayload | null> {
+  if (!hasSupabaseAdmin()) return null;
+  const supabase = getSupabaseAdmin();
+  const cfg = getChainConfig(chain);
+
+  const { data, error } = await supabase
+    .from("token_daily_prices")
+    .select("day_utc,price_usd")
+    .eq("chain_key", chain)
+    .order("day_utc", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) return null;
+
+  return {
+    network: cfg.alchemyNetwork,
+    address: cfg.tokenAddress,
+    currency: "usd",
+    data: data.map((row) => ({
+      timestamp: `${String(row.day_utc)}T00:00:00.000Z`,
+      value: String(row.price_usd ?? 0),
+    })),
+  };
+}
+
+async function upsertSupabaseHistory(
+  chain: ChainKey,
+  payload: TokenHistoryPayload,
+  options?: { replace?: boolean }
+): Promise<void> {
+  if (!hasSupabaseAdmin() || payload.data.length === 0) return;
+
+  const supabase = getSupabaseAdmin();
+  if (options?.replace) {
+    const { error } = await supabase.from("token_daily_prices").delete().eq("chain_key", chain);
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
-  const payload = await fetchHistoricalChunked(
+  const rows = payload.data.map((row) => ({
+    chain_key: chain,
+    token_address: payload.address.toLowerCase(),
+    day_utc: asDay(row.timestamp),
+    price_usd: Number(row.value) || 0,
+    source: getChainConfig(chain).historyProvider,
+    refreshed_at: new Date().toISOString(),
+  }));
+
+  const chunkSize = 500;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const part = rows.slice(i, i + chunkSize);
+    const { error } = await supabase
+      .from("token_daily_prices")
+      .upsert(part, { onConflict: "chain_key,day_utc" });
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+}
+
+async function fetchFullHistory(chain: ChainKey): Promise<TokenHistoryPayload> {
+  const cfg = getChainConfig(chain);
+  const endTime = new Date().toISOString();
+
+  if (cfg.historyProvider === "moralis") {
+    return fetchMoralisHistorical({
+      chain,
+      fromIso: INITIAL_START_TIME,
+      toIso: endTime,
+      limit: 1000,
+    });
+  }
+
+  return fetchHistoricalChunked(
     {
-      network: TOKEN_CONFIG.network,
-      address: TOKEN_CONFIG.address,
-      interval: TOKEN_CONFIG.interval,
+      network: cfg.alchemyNetwork,
+      address: cfg.tokenAddress,
+      interval: "1d",
       withMarketData: true,
     },
-    TOKEN_CONFIG.initialStartTime,
-    TOKEN_CONFIG.initialEndTime
+    INITIAL_START_TIME,
+    endTime
   );
-
-  await writeTokenHistory(payload);
 }
 
-/**
- * Append daily candles from the day after the last saved point through "now".
- * Safe to call on each request; no-ops when already up to date for today (UTC).
- */
-export async function refreshTokenHistoryToToday(): Promise<TokenHistoryPayload | null> {
-  let stored = await readTokenHistory();
-  if (!stored || stored.data.length === 0) {
-    await syncTokenHistoryOnStartup();
-    stored = await readTokenHistory();
-    if (!stored) return null;
-  }
-
-  if (hasCandleThroughToday(stored)) {
-    return stored;
-  }
-
+async function appendToToday(chain: ChainKey, stored: TokenHistoryPayload): Promise<TokenHistoryPayload> {
+  const cfg = getChainConfig(chain);
   const last = stored.data[stored.data.length - 1]!;
-  const startTime = nextUtcDayIso(last.timestamp);
+  const startTime = utcDayIso(last.timestamp);
   const endTime = new Date().toISOString();
 
   if (new Date(startTime) >= new Date(endTime)) {
     return stored;
   }
 
-  const chunk = await fetchHistoricalChunked(
-    {
-      network: TOKEN_CONFIG.network,
-      address: TOKEN_CONFIG.address,
-      interval: TOKEN_CONFIG.interval,
-      withMarketData: true,
-    },
-    startTime,
-    endTime
-  );
+  const chunk =
+    cfg.historyProvider === "moralis"
+      ? await fetchMoralisHistorical({
+          chain,
+          fromIso: startTime,
+          toIso: endTime,
+          limit: 1000,
+        })
+      : await fetchHistoricalChunked(
+          {
+            network: cfg.alchemyNetwork,
+            address: cfg.tokenAddress,
+            interval: "1d",
+            withMarketData: true,
+          },
+          startTime,
+          endTime
+        );
 
-  const merged = mergeTokenHistory(stored, chunk);
-  await writeTokenHistory(merged);
-  return merged;
+  return mergeTokenHistory(stored, chunk);
+}
+
+export async function refreshTokenHistoryToToday(chain: ChainKey): Promise<TokenHistoryPayload | null> {
+  const cfg = getChainConfig(chain);
+  let stored = await loadSupabaseHistory(chain);
+  if (!stored) {
+    stored = await readTokenHistory(chain);
+  }
+
+  if (stored && stored.data.length > 0 && hasFutureCandles(stored)) {
+    // Legacy caches could contain prefilled future days; Moralis chains should fully rebuild.
+    if (cfg.historyProvider === "moralis") {
+      const full = await fetchFullHistory(chain);
+      await writeTokenHistory(full, chain);
+      await upsertSupabaseHistory(chain, full, { replace: true });
+      return full;
+    }
+
+    stored = pruneFutureCandles(stored);
+  }
+
+  if (!stored || stored.data.length === 0) {
+    const full = await fetchFullHistory(chain);
+    await writeTokenHistory(full, chain);
+    await upsertSupabaseHistory(chain, full, { replace: true });
+    return full;
+  }
+
+  const refreshed = await appendToToday(chain, stored);
+  await writeTokenHistory(refreshed, chain);
+  await upsertSupabaseHistory(chain, refreshed);
+  return refreshed;
+}
+
+export async function syncTokenHistoryOnStartup(): Promise<void> {
+  for (const chain of CHAIN_KEYS) {
+    try {
+      await refreshTokenHistoryToToday(chain);
+    } catch (err) {
+      console.error(`[token-sync] ${chain} failed:`, err);
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import { CHAIN_KEYS } from "@/lib/chains";
 import { refreshTokenHistoryToToday } from "@/lib/sync-token-history";
 import { NextResponse } from "next/server";
 
@@ -27,10 +28,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const payload = await refreshTokenHistoryToToday();
+    const points: Record<string, number> = {};
+    for (const chain of CHAIN_KEYS) {
+      const payload = await refreshTokenHistoryToToday(chain);
+      points[chain] = payload?.data.length ?? 0;
+    }
     return NextResponse.json({
       ok: true,
-      points: payload?.data.length ?? 0,
+      points,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";

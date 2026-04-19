@@ -1,6 +1,8 @@
 "use client";
 
 import type { DayBurnSummary } from "@/lib/burn-types";
+import type { ChainKey } from "@/lib/chains";
+import { txExplorerUrl } from "@/lib/chains";
 import type { TokenHistoryPayload } from "@/lib/token-types";
 import type { EChartsOption } from "echarts";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -72,10 +74,6 @@ function formatXenHuman(n: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 }
 
-function etherscanTx(hash: string) {
-  return `https://etherscan.io/tx/${hash}`;
-}
-
 function escapeHtml(input: string): string {
   return input
     .replaceAll("&", "&amp;")
@@ -120,10 +118,11 @@ function burnRadius(total: number): number {
 }
 
 export type TokenPriceChartProps = {
+  chain: ChainKey;
   burnByDay?: DayBurnSummary[] | null;
 };
 
-function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
+function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) {
   const [allRows, setAllRows] = useState<Row[] | null>(null);
   const [meta, setMeta] = useState<{ network: string; address: string } | null>(
     null
@@ -138,7 +137,7 @@ function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/token-history");
+        const res = await fetch(`/api/token-history?chain=${chain}`);
         const json = (await res.json()) as TokenHistoryPayload & { error?: string };
         if (!res.ok) {
           throw new Error(json.error ?? res.statusText);
@@ -165,7 +164,7 @@ function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [chain]);
 
   const visibleRows = useMemo(() => {
     if (!allRows?.length) return [];
@@ -362,7 +361,7 @@ function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
               .map((tx) => {
                 const short = `${tx.hash.slice(0, 12)}…`;
                 return `<li style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap;font-size:12px;line-height:1.35;">
-                  <a href="${etherscanTx(tx.hash)}" target="_blank" rel="noopener noreferrer" style="color:#67e8f9;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;">${escapeHtml(short)}</a>
+                  <a href="${txExplorerUrl(chain, tx.hash)}" target="_blank" rel="noopener noreferrer" style="color:#67e8f9;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;">${escapeHtml(short)}</a>
                   <span style="color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${formatXenHuman(tx.xenAmount)} XEN</span>
                 </li>`;
               })
@@ -479,7 +478,7 @@ function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
         },
       ],
     } satisfies EChartsOption;
-  }, [allRows, burnScatterPoints, startIndex, endIndex]);
+  }, [allRows, burnScatterPoints, chain, startIndex, endIndex]);
 
   const chartEvents = useMemo(
     () => ({
@@ -623,5 +622,5 @@ function TokenPriceChartImpl({ burnByDay = null }: TokenPriceChartProps) {
 
 export const TokenPriceChart = memo(
   TokenPriceChartImpl,
-  (prev, next) => prev.burnByDay === next.burnByDay
+  (prev, next) => prev.burnByDay === next.burnByDay && prev.chain === next.chain
 );

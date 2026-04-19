@@ -9,18 +9,42 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ```env
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
+ALCHEMY_API_KEY=...
+MORALIS_API_KEY=...
+
+# Optional explicit RPC URLs (if you do not want to derive from ALCHEMY_API_KEY)
+ALCHEMY_RPC_URL_ETH=...
+ALCHEMY_RPC_URL_OPTIMISM=...
+ALCHEMY_RPC_URL_POLYGON=...
+ALCHEMY_RPC_URL_BASE=...
+PULSE_RPC_URL=...
+
+# Optional Moralis pair overrides per chain (defaults to configured pair)
+MORALIS_PAIR_OPTIMISM=...
+MORALIS_PAIR_BASE=...
+MORALIS_PAIR_PULSE=...
 ```
 
-4. Keep your existing Alchemy env variables.
+4. Run the updated SQL from `supabase/schema.sql`.
 
-When configured, `/api/wallet-burns` will:
+When configured, `/api/wallet-burns` (with `chain` query/body) will:
 - persist wallet burn data,
 - update stored data only if total burned XEN increased,
 - return global stats and leaderboard data.
 
+`/api/raw-stats` returns chain-level raw totals (XEN, USD, tx, wallets).
+
 ## Token history storage
 
-Local development stores token price history in `data/token-history.json`.
+Local development stores chain price history in `data/token-history-<chain>.json` fallback files.
+
+Primary cache is now Supabase table `token_daily_prices` (per chain, per day), which reduces repeated Alchemy requests.
+
+Historical price providers:
+- ETH + Polygon: Alchemy historical API
+- Optimism + Base + Pulse: Moralis OHLCV (`close` as daily price), with cursor pagination and limit 1000 per page
+
+If history already exists, refresh starts from the last stored UTC day instead of refetching the full range.
 
 On Vercel, the app automatically uses `/tmp/token-history.json` as an ephemeral runtime cache because the deployment filesystem is not writable. You can override the location with:
 
