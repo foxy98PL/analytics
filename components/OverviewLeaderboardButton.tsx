@@ -50,7 +50,9 @@ export function OverviewLeaderboardButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/raw-stats?leaderboard=1&limit=${nextLimit}`);
+      const res = await fetch(`/api/raw-stats?leaderboard=1&limit=${nextLimit}`, {
+        cache: "no-store",
+      });
       const json = (await res.json()) as RawStatsWithLeaderboard;
       if (!res.ok || json.error) {
         throw new Error(json.error ?? "Failed to load leaderboard");

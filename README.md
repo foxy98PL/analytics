@@ -46,6 +46,12 @@ Historical price providers:
 
 If history already exists, refresh starts from the last stored UTC day instead of refetching the full range.
 
+Production sync behavior:
+- Startup sync runs automatically on server boot.
+- To disable startup sync (for faster cold starts), set `DISABLE_STARTUP_TOKEN_SYNC=1`.
+- Scheduled refresh is configured in `vercel.json` to call `/api/cron/refresh-token` every 6 hours.
+- Set `CRON_SECRET` in Vercel so cron requests are authorized.
+
 On Vercel, the app automatically uses `/tmp/token-history.json` as an ephemeral runtime cache because the deployment filesystem is not writable. You can override the location with:
 
 ```env

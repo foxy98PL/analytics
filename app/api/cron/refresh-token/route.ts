@@ -3,6 +3,8 @@ import { refreshTokenHistoryToToday } from "@/lib/sync-token-history";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * Optional daily job (e.g. Vercel Cron). In production, set CRON_SECRET and send:

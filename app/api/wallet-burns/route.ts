@@ -8,6 +8,8 @@ import { hasSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const ADDR = /^0x[a-fA-F0-9]{40}$/;
 

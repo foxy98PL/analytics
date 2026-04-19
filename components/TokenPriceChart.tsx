@@ -83,7 +83,7 @@ function escapeHtml(input: string): string {
     .replaceAll("'", "&#39;");
 }
 
-const CHART_LINE = "#60a5fa";
+const CHART_LINE = "#bef264";
 const CHART_GRID = "rgba(255,255,255,0.06)";
 const CHART_AXIS = "#94a3b8";
 
@@ -137,7 +137,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/token-history?chain=${chain}`);
+        const res = await fetch(`/api/token-history?chain=${chain}`, { cache: "no-store" });
         const json = (await res.json()) as TokenHistoryPayload & { error?: string };
         if (!res.ok) {
           throw new Error(json.error ?? res.statusText);
@@ -340,7 +340,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
         trigger: "axis",
         enterable: true,
         backgroundColor: "rgba(15,23,42,0.95)",
-        borderColor: "rgba(56,189,248,0.35)",
+        borderColor: "rgba(190,242,100,0.35)",
         textStyle: { color: "#e2e8f0" },
         formatter: (params: unknown) => {
           const list = (Array.isArray(params) ? params : [params]) as Array<{
@@ -361,7 +361,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
               .map((tx) => {
                 const short = `${tx.hash.slice(0, 12)}…`;
                 return `<li style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap;font-size:12px;line-height:1.35;">
-                  <a href="${txExplorerUrl(chain, tx.hash)}" target="_blank" rel="noopener noreferrer" style="color:#67e8f9;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;">${escapeHtml(short)}</a>
+                  <a href="${txExplorerUrl(chain, tx.hash)}" target="_blank" rel="noopener noreferrer" style="color:#bef264;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;">${escapeHtml(short)}</a>
                   <span style="color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${formatXenHuman(tx.xenAmount)} XEN</span>
                 </li>`;
               })
@@ -369,10 +369,10 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
 
             return `
               <div style="max-width:min(90vw,360px);padding:10px 12px;">
-                <div style="font-size:12px;color:#67e8f9;opacity:.9;">${ts?.toLocaleDateString("en-US", { dateStyle: "full", timeZone: "UTC" }) ?? ""}</div>
+                <div style="font-size:12px;color:#bef264;opacity:.9;">${ts?.toLocaleDateString("en-US", { dateStyle: "full", timeZone: "UTC" }) ?? ""}</div>
                 <div style="margin-top:6px;font-size:15px;font-weight:600;color:#f1f5f9;">Burned on this day: ${formatXenHuman(item.burnTotal)} XEN</div>
                 <div style="font-size:12px;color:#94a3b8;">${item.txCount} transactions</div>
-                <div style="font-size:12px;color:#c4b5fd;">Burned value: ${formatUsdPrice(item.burnUsd, 2)} USD</div>
+                <div style="font-size:12px;color:#a3e635;">Burned value: ${formatUsdPrice(item.burnUsd, 2)} USD</div>
                 <ul style="margin:8px 0 0;max-height:140px;overflow:auto;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.1);list-style:none;">${txList}</ul>
                 ${item.txs.length > 10 ? '<div style="font-size:11px;color:#64748b;margin-top:4px;">Full list is available in the table below.</div>' : ""}
                 <div style="font-size:12px;color:#94a3b8;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);">Day close price: $${formatUsdPrice(item.price)}</div>
@@ -387,7 +387,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
           return `
             <div style="padding:8px 10px;">
               <div style="font-size:12px;color:#94a3b8;">${ts?.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) ?? ""}</div>
-              <div style="margin-top:4px;font-size:15px;font-weight:600;color:#e0f2fe;">$${formatUsdPrice(price)}</div>
+                <div style="margin-top:4px;font-size:15px;font-weight:600;color:#ecfccb;">$${formatUsdPrice(price)}</div>
               <div style="font-size:11px;color:#64748b;">Daily close price</div>
             </div>
           `;
@@ -410,14 +410,14 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
           height: 24,
           bottom: 24,
           brushSelect: true,
-          borderColor: "rgba(56,189,248,0.35)",
+          borderColor: "rgba(190,242,100,0.35)",
           backgroundColor: "rgba(255,255,255,0.04)",
           dataBackground: {
-            lineStyle: { color: "rgba(96,165,250,0.7)" },
-            areaStyle: { color: "rgba(96,165,250,0.2)" },
+            lineStyle: { color: "rgba(190,242,100,0.7)" },
+            areaStyle: { color: "rgba(190,242,100,0.2)" },
           },
-          fillerColor: "rgba(96,165,250,0.24)",
-          handleStyle: { color: "#60a5fa", borderColor: "#67e8f9" },
+          fillerColor: "rgba(163,230,53,0.24)",
+          handleStyle: { color: "#a3e635", borderColor: "#d9f99d" },
           textStyle: { color: "#a8a29e" },
           startValue: allRows[startIndex]?.t,
           endValue: allRows[endIndex]?.t,
@@ -439,9 +439,9 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: "rgba(96,165,250,0.35)" },
-                { offset: 0.55, color: "rgba(96,165,250,0.08)" },
-                { offset: 1, color: "rgba(96,165,250,0.0)" },
+                { offset: 0, color: "rgba(190,242,100,0.35)" },
+                { offset: 0.55, color: "rgba(163,230,53,0.08)" },
+                { offset: 1, color: "rgba(163,230,53,0.0)" },
               ],
             },
           },
@@ -461,17 +461,17 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
             return burnRadius(total);
           },
           itemStyle: {
-            color: "rgba(167,139,250,0.75)",
-            borderColor: "rgba(224,231,255,0.7)",
+            color: "rgba(190,242,100,0.75)",
+            borderColor: "rgba(236,252,203,0.8)",
             borderWidth: 1,
             shadowBlur: 8,
-            shadowColor: "rgba(167,139,250,0.25)",
+            shadowColor: "rgba(163,230,53,0.25)",
           },
           emphasis: {
             scale: 1.04,
             itemStyle: {
               shadowBlur: 10,
-              shadowColor: "rgba(167,139,250,0.35)",
+              shadowColor: "rgba(163,230,53,0.35)",
             },
           },
           z: 4,
@@ -508,7 +508,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
   const presetBtn =
     "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm";
   const presetActive =
-    "bg-gradient-to-r from-cyan-300 to-violet-400 text-slate-950 shadow-[0_10px_24px_-14px_rgba(56,189,248,0.95)]";
+    "bg-gradient-to-r from-lime-300 to-lime-400 text-zinc-950 shadow-[0_10px_24px_-14px_rgba(163,230,53,0.95)]";
   const presetIdle =
     "bg-white/5 text-slate-300 ring-1 ring-white/10 hover:bg-white/10";
 
@@ -524,7 +524,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-sky-300/20 bg-gradient-to-br from-sky-500/[0.08] to-violet-500/[0.08] p-3 ring-1 ring-sky-200/15 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex flex-col gap-3 rounded-2xl border border-lime-300/20 bg-gradient-to-br from-lime-500/[0.08] to-emerald-500/[0.08] p-3 ring-1 ring-lime-200/15 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-300/80">
             Range
@@ -548,7 +548,7 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
             </button>
           ))}
           {preset === "custom" && (
-            <span className="rounded-md bg-white/10 px-2 py-1 text-xs text-cyan-200/90">
+            <span className="rounded-md bg-white/10 px-2 py-1 text-xs text-lime-200/90">
               custom
             </span>
           )}
@@ -590,12 +590,12 @@ function TokenPriceChartImpl({ chain, burnByDay = null }: TokenPriceChartProps) 
         </p>
       )}
 
-      <div className="relative overflow-hidden rounded-3xl border border-sky-300/20 bg-gradient-to-b from-sky-500/[0.08] to-violet-500/[0.08] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_-12px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-6">
+      <div className="relative overflow-hidden rounded-3xl border border-lime-300/20 bg-gradient-to-b from-lime-500/[0.08] to-emerald-500/[0.08] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_-12px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-6">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
             background:
-              "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56,189,248,0.3), transparent 55%)",
+              "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(163,230,53,0.3), transparent 55%)",
           }}
         />
         <div className="relative h-[min(460px,56vh)] w-full min-h-[300px]">

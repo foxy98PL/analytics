@@ -42,7 +42,7 @@ export function RawStatsPanel() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/raw-stats");
+        const res = await fetch("/api/raw-stats", { cache: "no-store" });
         const json = (await res.json()) as RawStatsResponse;
         if (!res.ok || json.error) {
           throw new Error(json.error ?? "Failed to fetch raw stats");

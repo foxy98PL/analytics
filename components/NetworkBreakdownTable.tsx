@@ -58,7 +58,9 @@ export function NetworkBreakdownTable({ rows }: { rows: ChainRow[] }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/raw-stats/leaderboard?chain=${chain}&limit=${nextLimit}`);
+      const res = await fetch(`/api/raw-stats/leaderboard?chain=${chain}&limit=${nextLimit}`, {
+        cache: "no-store",
+      });
       const json = (await res.json()) as LeaderboardResponse;
       if (!res.ok || json.error) {
         throw new Error(json.error ?? "Failed to load leaderboard");

@@ -3,7 +3,9 @@ export async function register() {
     return;
   }
 
-  if (process.env.VERCEL === "1") {
+  // Enable startup sync on all runtimes by default.
+  // Use DISABLE_STARTUP_TOKEN_SYNC=1 only if you need to reduce cold-start work.
+  if (process.env.DISABLE_STARTUP_TOKEN_SYNC === "1") {
     return;
   }
 

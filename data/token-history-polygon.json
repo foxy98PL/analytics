@@ -4512,6 +4512,42 @@
       "timestamp": "2026-04-13T00:00:00Z",
       "marketCap": "0",
       "totalVolume": "26.218715221143"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-14T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "136.559110737036"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-15T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "352.217179949187"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-16T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "58.889149487464"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-17T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "91.37155992724"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-18T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "46.214807826473"
+    },
+    {
+      "value": "0",
+      "timestamp": "2026-04-19T00:00:00Z",
+      "marketCap": "0",
+      "totalVolume": "6.41453126178"
     }
   ]
 }

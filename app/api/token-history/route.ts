@@ -4,6 +4,8 @@ import { readTokenHistory } from "@/lib/token-history-store";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * Returns persisted token history and ensures daily refresh (UTC) on the server.

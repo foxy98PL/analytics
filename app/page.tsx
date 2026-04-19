@@ -5,6 +5,9 @@ import { loadRawStatsAllChains } from "@/lib/burn-analytics-store";
 import { hasSupabaseAdmin } from "@/lib/supabase-server";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function formatXen(n: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 }
